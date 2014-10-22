@@ -28,6 +28,7 @@ class Url
 				row
 			end
 		rescue Mechanize::ResponseCodeError => e
+#could try this: http://dazdaztech.wordpress.com/2013/08/03/using-google-custom-search-api-from-the-command-line/
 			google_page = agent.get("http://www.google.com")
 			broken_url = row.split('/')
 			if !broken_url.last.match(/[a-z]/i)
