@@ -20,8 +20,10 @@ class Url
 
 	def validate_and_correct_url(row)
 		agent = Mechanize.new 
+
 		begin 
 			page = agent.get(row) 
+#read the URL where it lands... if it's http://www.usatoday.com/errors/404/ then search google
 			if page
 				row
 			end
