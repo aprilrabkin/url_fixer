@@ -4,37 +4,42 @@ require 'mechanize'
 require 'nokogiri'
 
 class Url
-	attr_accessor :rows
+	attr_accessor :rows, :good_url
 	def initialize
 		@rows = []
 	end
 	def one_at_a_time
 		CSV.foreach("original.csv") do |row|
 			if row.first.split('/').count > 2
-				row = row.first.gsub("usat :", "http://www.usatoday.com")
-				validate_and_correct_url(row)
-				@rows << [row]
+				url = row.first.gsub("usat :", "http://www.usatoday.com")
+				if url.end_with? '/'
+					@rows << [url]
+				else
+					validate_or_correct_url(url)
+					@rows << [good_url]
+				end
+			else 
+				@rows << ["N/A. This is a portal, not a news item."]
 			end
 		end
 	end
 
-	def validate_and_correct_url(row)
-		agent = Mechanize.new 
-
+	def validate_or_correct_url(url)
+		puts url
 		begin 
-			page = agent.get(row) 
-#read the URL where it lands... if it's http://www.usatoday.com/errors/404/ then search google
-			if page
-				row
-			end
-		rescue Mechanize::ResponseCodeError => e
-#could try this: http://dazdaztech.wordpress.com/2013/08/03/using-google-custom-search-api-from-the-command-line/
+			agent = Mechanize.new 
+			page = agent.head(url) 
+			good_url = url 
+		rescue Mechanize::ResponseCodeError
+
+			agent = Mechanize.new
 			google_page = agent.get("http://www.google.com")
-			broken_url = row.split('/')
+			google_page.encoding = 'utf-8'
+			broken_url = url.split('/')
 			if !broken_url.last.match(/[a-z]/i)
-				broken_url.shift
+				broken_url.pop
 			end
-			search_terms = broken_url.last + " site:usatoday.com"
+			search_terms = broken_url.last + broken_url[3] + " site:usatoday.com"
 			search_results = google_page.form do |form|
 				form.field_with(:name=>"q").value = search_terms
 			end.submit
@@ -50,11 +55,12 @@ class Url
 							end
 						end
 					end
-				sleep(3)
-				good_url
+				sleep(0.1)
 				end
 			end
 		end
+		puts good_url
+		@good_url = good_url
 	end
 
 	def write_into_CSV_file
